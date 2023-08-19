@@ -1,3 +1,4 @@
+from django.utils.html import format_html
 from django.contrib import admin
 from .models import *
 # Register your models here.
@@ -19,6 +20,14 @@ class productAdmin(admin.ModelAdmin):
     search_fields=['title','description']
     prepopulated_fields={'sku':('title',)}
 
+
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display=['product','show_url']
+    def show_url(self, obj):
+        return format_html('<a href="%s">%s</a>' % (obj.file_path, "Image Link"))
+    show_url.allow_tags = True
+    show_url.short_description = "Image Link Path"    
+
 class ProductVariantAdmin(admin.ModelAdmin):
     list_display=['variant_title','variant','product']
     list_display_links=('variant_title','product')
@@ -33,6 +42,6 @@ class ProductVariantPriceAdmin(admin.ModelAdmin):
 
 admin.site.register(Variant, variantAdmin)
 admin.site.register(Product, productAdmin)
-admin.site.register(ProductImage)
+admin.site.register(ProductImage, ProductImageAdmin)
 admin.site.register(ProductVariant, ProductVariantAdmin)
 admin.site.register(ProductVariantPrice, ProductVariantPriceAdmin)    
