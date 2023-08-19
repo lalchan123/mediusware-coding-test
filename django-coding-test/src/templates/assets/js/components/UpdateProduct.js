@@ -10,7 +10,9 @@ import axios from 'axios'
 
 import FlashMessage from 'react-flash-message'
 
-const CreateProduct = (props) => {
+const UpdateProduct = ({ props, id }) => {
+
+    console.log("17 id", id);
 
     const [productName, setProductName] = useState("")
     const [productSku, setProductSku] = useState("")
@@ -20,20 +22,6 @@ const CreateProduct = (props) => {
 
     const [show, setShow] = useState(false)
     const [messsage, setMesssage] = useState("")
-
-
-    const [productVariantPrices, setProductVariantPrices] = useState([])
-    console.log("16 productVariantPrices", productVariantPrices);
-
-    const [productVariants, setProductVariant] = useState([
-        {
-            option: 1,
-            tags: []
-        }
-    ])
-    console.log("24 productVariants", productVariants);
-
-
 
     //  image 
     const wrapperRef = useRef(null);
@@ -56,6 +44,131 @@ const CreateProduct = (props) => {
     }
 
     //  image 
+
+    React.useEffect(() => {
+        axios.get(`http://localhost:8000/product/getproductupdate-api/${id}/`)
+            .then(res => {
+                // console.log("101", res.data)
+                setProductName(res?.data?.product?.title)
+                setProductSku(res?.data?.product?.sku)
+                setProductDescription(res?.data?.product?.description)
+                setFileList(res?.data?.productImage)
+                setImage(res?.data?.productImage[0]?.file_path)
+                
+
+
+                var pvlist = []
+                var tag1 = []
+                var tag2 = []
+                var tag3 = []
+                var ssections = { option: 1 }
+                var csections = { option: 2 }
+                var stsections = { option: 3 }
+                var scount = 0
+                var ccount = 0
+                var stcount = 0
+
+                res?.data?.productVariant?.map((item, i) => {
+
+                    if (item.variant === 1) {
+                        scount += 1
+                        tag1.push(item.variant_title)
+                    }
+                    if (item.variant === 2) {
+                        ccount += 1
+                        tag2.push(item.variant_title)
+                    }
+                    if (item.variant === 3) {
+                        stcount += 1
+                        tag3.push(item.variant_title)
+                    }
+                })
+
+                if (scount >= 1 && ccount >= 1 && stcount >= 1) {
+
+                    ssections['tags'] = tag1
+                    csections['tags'] = tag2
+                    stsections['tags'] = tag3
+                    if (ssections !== "" && csections !== "" && stsections !== "") {
+                        pvlist.push(ssections)
+                        pvlist.push(csections)
+                        pvlist.push(stsections)
+                        ssections = { option: 1 }
+                        csections = { option: 2 }
+                        stsections = { option: 3 }
+                    }
+                }
+                if (scount >= 1 && ccount >= 1 && stcount == 0) {
+
+                    ssections['tags'] = tag1
+                    csections['tags'] = tag2
+                    if (ssections !== "" && csections !== "") {
+                        pvlist.push(ssections)
+                        pvlist.push(csections)
+                        ssections = { option: 1 }
+                        csections = { option: 2 }
+                    }
+                }
+                if (scount >= 1 && ccount == 0 && stcount == 0) {
+
+                    ssections['tags'] = tag1
+                    if (ssections !== "") {
+                        pvlist.push(ssections)
+                        ssections = { option: 1 }
+                    }
+                }
+
+                setProductVariant(pvlist)
+
+                var plist = []
+                var psection = {}
+                res?.data?.productVariantPrice?.map((pitem, i) => {
+                    if (pitem?.product_variant_one && pitem?.product_variant_two && pitem?.product_variant_three) {
+                        var title1 = `${pitem?.product_variant_one}/${pitem?.product_variant_two}/${pitem?.product_variant_three}/`
+                        psection['title'] = title1
+                        psection['price'] = pitem?.price
+                        psection['stock'] = pitem?.stock
+                        if (psection !== "") {
+                            plist.push(psection)
+                            psection = {}
+                        }
+                    }
+                    else if (pitem?.product_variant_one && pitem?.product_variant_two) {
+                        var title1 = `${pitem?.product_variant_one}/${pitem?.product_variant_two}/`
+                        psection['title'] = title1
+                        psection['price'] = pitem?.price
+                        psection['stock'] = pitem?.stock
+                        if (psection !== "") {
+                            plist.push(psection)
+                            psection = {}
+                        }
+                    }
+                    else if (pitem?.product_variant_one) {
+                        var title1 = `${pitem?.product_variant_one}/`
+                        psection['title'] = title1
+                        psection['price'] = pitem?.price
+                        psection['stock'] = pitem?.stock
+                        if (psection !== "") {
+                            plist.push(psection)
+                            psection = {}
+                        }
+                    }
+                })
+                setProductVariantPrices(plist)
+            })
+            .catch(err => console.log("47", err));
+
+    }, []);
+
+
+    const [productVariantPrices, setProductVariantPrices] = useState([])
+
+    const [productVariants, setProductVariant] = useState([
+        {
+            option: 1,
+            tags: []
+        }
+    ])
 
 
 
@@ -153,10 +266,16 @@ const CreateProduct = (props) => {
     console.log("31 csrftoken", csrftoken);
 
     // Save product
-    let saveProduct = (event) => {
+    let updateProduct = (event) => {
         event.preventDefault();
+
         setShow(false)
-        // TODO : write your code here to save the product
+        // TODO : write your code here to edit the product
+        if (!image || image === undefined) {
+            setShow(true)
+            setMesssage("Image path not found, Please upload your image file")
+        }
+
         const data = {
             'productName': productName,
             'productSku': productSku,
@@ -173,18 +292,19 @@ const CreateProduct = (props) => {
                 'X-CSRFToken': csrftoken
             }
         };
-
-        axios.post("http://localhost:8000/product/createproduct-api/", data, config)
-            .then(response => {
-                console.log("161 Product Create", response.data)
-                setShow(true)
-                setMesssage(response?.data?.message)
-            })
-            .catch(err => {
-                console.log("206 error", err)
-                setShow(true)
-                setMesssage(err.message)
-            });
+        if (productName && productSku && productDescription && image && productVariants && productVariantPrices) {
+            axios.put(`http://localhost:8000/product/productupdate-api/${id}/`, data, config)
+                .then(response => {
+                    console.log("161 Product Updated Successfully", response.data)
+                    setShow(true)
+                    setMesssage(response?.data?.message)
+                })
+                .catch(err => {
+                    console.log("206 error", err)
+                    setShow(true)
+                    setMesssage(err.message)
+                });
+        }
 
     }
 
@@ -257,9 +377,9 @@ const CreateProduct = (props) => {
                                             </p>
 
                                             <div className="drop-file-preview__item">
-                                                <img src={image} alt="" />
+                                                <img src={image}e alt="" />
                                                 <div className="drop-file-preview__item__info">
-                                                    <p>{fileList?.name}</p>
+                                                    <p>{fileList?.name ? fileList?.name : fileList[0]?.product}</p>
                                                     <p>{fileList?.size}B</p>
                                                 </div>
                                                 <span className="drop-file-preview__item__del" onClick={() => fileRemove(fileList)}>x</span>
@@ -304,14 +424,14 @@ const CreateProduct = (props) => {
                                                             productVariants.length > 1
                                                                 ? <label htmlFor="" className="float-right text-primary"
                                                                     style={{ marginTop: "-30px" }}
-                                                                    onClick={() => removeProductVariant(index)}>remove</label>
+                                                                    onClick={() => removeProductVariant(index)} >remove</label>
                                                                 : ''
                                                         }
 
                                                         <section style={{ marginTop: "30px" }}>
                                                             <TagsInput value={element.tags}
                                                                 style="margin-top:30px"
-                                                                onChange={(value) => handleInputTagOnChange(value, index)} />
+                                                                onChange={(value) => handleInputTagOnChange(value, index)} disabled="true" />
                                                         </section>
 
                                                     </div>
@@ -325,7 +445,7 @@ const CreateProduct = (props) => {
                             </div>
                             <div className="card-footer">
                                 {productVariants.length !== 3
-                                    ? <button className="btn btn-primary" onClick={handleAddClick}>Add another
+                                    ? <button className="btn btn-primary" onClick={handleAddClick} disabled="true">Add another
                                         option</button>
                                     : ''
                                 }
@@ -349,8 +469,8 @@ const CreateProduct = (props) => {
                                                     return (
                                                         <tr key={index}>
                                                             <td>{productVariantPrice.title}</td>
-                                                            <td><input className="form-control" type="text" onChange={(e) => handleInputPriceOnChange(e.target.value, index)} /></td>
-                                                            <td><input className="form-control" type="text" onChange={(e) => handleInputStockOnChange(e.target.value, index)} /></td>
+                                                            <td><input className="form-control" type="text" onChange={(e) => handleInputPriceOnChange(e.target.value, index)} value={productVariantPrice?.price ? productVariantPrice?.price : 0} /></td>
+                                                            <td><input className="form-control" type="text" onChange={(e) => handleInputStockOnChange(e.target.value, index)} value={productVariantPrice?.stock ? productVariantPrice?.stock : 0} /></td>
                                                         </tr>
                                                     )
                                                 })
@@ -363,7 +483,7 @@ const CreateProduct = (props) => {
                     </div>
                 </div>
 
-                <button type="button" onClick={saveProduct} className="btn btn-lg btn-primary">Save</button>
+                <button type="button" onClick={updateProduct} className="btn btn-lg btn-primary">Update</button>
                 <button type="button" className="btn btn-secondary btn-lg">Cancel</button>
             </section>
             {show &&
@@ -377,4 +497,4 @@ const CreateProduct = (props) => {
     );
 };
 
-export default CreateProduct;
+export default UpdateProduct;
