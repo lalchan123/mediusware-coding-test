@@ -24,6 +24,10 @@ python manage.py makemigrations
 ```
 python manage.py migrate
 ```
+## to load the demo data execute this command
+```
+python manage.py loaddata django_coding_test.json
+```
 ## superuser create with this command
 ```
 python manage.py createsuperuser
