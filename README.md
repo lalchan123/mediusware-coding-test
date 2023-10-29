@@ -17,6 +17,13 @@ pipenv shell
 ```
 cd src
 ```
+## migrate and migration command
+```
+python manage.py makemigrations
+```
+```
+python manage.py migrate
+```
 ## superuser create with this command
 ```
 python manage.py createsuperuser
